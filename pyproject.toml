@@ -1,0 +1,67 @@
+[build-system]
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "hive-reader-rs"
+version = "0.1.0"
+description = "高性能Rust版本的Hive数据读取工具，支持Polars DataFrame"
+authors = [
+    {name = "Hive Reader Team", email = "team@example.com"},
+]
+license = {text = "MIT"}
+readme = "README.md"
+requires-python = ">=3.8"
+keywords = ["hive", "rust", "polars", "big-data", "sql", "thrift"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Rust",
+    "Topic :: Database",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "polars>=0.19.0",
+    "typing-extensions>=4.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-benchmark>=4.0.0",
+    "maturin>=1.0.0",
+    "black>=23.0.0",
+    "isort>=5.0.0",
+    "mypy>=1.0.0",
+]
+test = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "pytest-benchmark>=4.0.0",
+]
+docs = [
+    "mkdocs>=1.4.0",
+    "mkdocs-material>=9.0.0",
+    "mkdocstrings[python]>=0.20.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/YOUR_USERNAME/hive-reader-rs"
+Repository = "https://github.com/YOUR_USERNAME/hive-reader-rs"
+Documentation = "https://github.com/YOUR_USERNAME/hive-reader-rs#readme"
+Issues = "https://github.com/YOUR_USERNAME/hive-reader-rs/issues"
+Changelog = "https://github.com/YOUR_USERNAME/hive-reader-rs/releases"
+
+[tool.maturin]
+python-source = "python"
+module-name = "hive_reader_rs.hive_reader_rs"
+features = ["pyo3/extension-module"] 
