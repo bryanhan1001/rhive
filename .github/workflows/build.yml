@@ -25,17 +25,30 @@ jobs:
       with:
         components: rustfmt, clippy
     
+    # 更新缓存配置，包含Cargo.lock
     - name: Rust Cache
       uses: Swatinem/rust-cache@v2
+      with:
+        # 包含Cargo.lock在缓存key中
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        # 清理旧缓存
+        cache-all-crates: "true"
+    
+    # 确保依赖是最新的
+    - name: Update dependencies
+      run: cargo update
     
     - name: Check formatting
       run: cargo fmt --all -- --check
     
+    # 修复Clippy配置，添加更详细的输出
     - name: Clippy
-      run: cargo clippy --all-targets --all-features -- -D warnings
+      run: |
+        cargo clippy --version
+        cargo clippy --all-targets --all-features --verbose -- -D warnings
     
     - name: Test
-      run: cargo test
+      run: cargo test --verbose
     
     - name: Install Python
       uses: actions/setup-python@v4
@@ -49,7 +62,7 @@ jobs:
     
     - name: Build test (no wheel)
       run: |
-        maturin develop
+        maturin develop --release
     
     - name: Python test
       run: |
