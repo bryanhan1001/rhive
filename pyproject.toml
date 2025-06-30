@@ -63,5 +63,4 @@ Changelog = "https://github.com/YOUR_USERNAME/hive-reader-rs/releases"
 
 [tool.maturin]
 python-source = "python"
-module-name = "hive_reader_rs.hive_reader_rs"
-features = ["pyo3/extension-module"] 
+module-name = "hive_reader_rs.hive_reader_rs" 

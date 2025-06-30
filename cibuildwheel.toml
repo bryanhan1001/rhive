@@ -13,33 +13,9 @@ skip = [
 # 构建设置
 build-verbosity = 1
 
-# 环境变量
+# 环境变量 (Rust已在wheels.yml中预安装)
 [tool.cibuildwheel.environment]
-# Rust环境变量
 CARGO_NET_GIT_FETCH_WITH_CLI = "true"
-
-# Linux设置
-[tool.cibuildwheel.linux]
-before-all = [
-    "curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain stable -y",
-    "yum install -y openssl-devel || (apt-get update && apt-get install -y libssl-dev)",
-]
-environment = { PATH = "$PATH:$HOME/.cargo/bin" }
-
-# Windows设置  
-[tool.cibuildwheel.windows]
-before-all = [
-    "rustup-init.exe -y --default-toolchain stable",
-    "rustup target add x86_64-pc-windows-msvc",
-]
-environment = { PATH = "$PATH;$USERPROFILE\\.cargo\\bin" }
-
-# macOS设置
-[tool.cibuildwheel.macos]
-before-all = [
-    "curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain stable -y",
-]
-environment = { PATH = "$PATH:$HOME/.cargo/bin" }
 
 # 测试设置
 [tool.cibuildwheel.test-requires]

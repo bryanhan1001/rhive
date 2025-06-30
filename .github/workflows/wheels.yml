@@ -25,6 +25,15 @@ jobs:
         with:
           components: rustfmt, clippy
 
+      - name: Verify Rust installation
+        run: |
+          rustc --version
+          cargo --version
+          which rustc
+          which cargo
+          echo "CARGO_HOME: $CARGO_HOME"
+          echo "RUSTUP_HOME: $RUSTUP_HOME"
+
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.21.3
         env:
@@ -32,12 +41,12 @@ jobs:
           CIBW_BUILD: cp38-* cp39-* cp310-* cp311-* cp312-*
           # 跳过32位和i686
           CIBW_SKIP: "*-win32 *-manylinux_i686 *-musllinux_i686"
-          # 系统依赖 (大多数Rust项目不需要额外系统依赖)
-          # CIBW_BEFORE_ALL_LINUX: echo "Rust toolchain already installed"
-          # Rust环境变量 (Rust已预安装，但确保PATH正确)
-          CIBW_ENVIRONMENT_LINUX: 'PATH="$PATH:$HOME/.cargo/bin"'
-          CIBW_ENVIRONMENT_WINDOWS: 'PATH="$PATH;%USERPROFILE%\.cargo\bin"'
-          CIBW_ENVIRONMENT_MACOS: 'PATH="$PATH:$HOME/.cargo/bin"'
+          # 确保构建依赖安装
+          CIBW_BEFORE_BUILD: pip install maturin
+          # 确保Rust工具链在PATH中 (已在action中预安装)
+          CIBW_ENVIRONMENT_LINUX: 'PATH="$PATH:$HOME/.cargo/bin" CARGO_NET_GIT_FETCH_WITH_CLI="true"'
+          CIBW_ENVIRONMENT_WINDOWS: 'PATH="$PATH;%USERPROFILE%\.cargo\bin" CARGO_NET_GIT_FETCH_WITH_CLI="true"'
+          CIBW_ENVIRONMENT_MACOS: 'PATH="$PATH:$HOME/.cargo/bin" CARGO_NET_GIT_FETCH_WITH_CLI="true"'
           # 构建设置
           CIBW_BUILD_VERBOSITY: 1
 
