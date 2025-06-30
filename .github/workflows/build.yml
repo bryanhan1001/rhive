@@ -1,14 +1,10 @@
-name: Build and Release
+name: Code Quality Check
 
 on:
-  # 推送到主分支时构建
+  # 推送到主分支时检查
   push:
     branches: [ main, master ]
-  # 创建标签时发布
-  push:
-    tags:
-      - 'v*'
-  # PR时构建测试
+  # PR时检查
   pull_request:
     branches: [ main, master ]
   # 手动触发
@@ -40,94 +36,21 @@ jobs:
     
     - name: Test
       run: cargo test
-
-  # 跨平台构建
-  build:
-    needs: lint
-    runs-on: ${{ matrix.platform.runner }}
-    strategy:
-      matrix:
-        platform:
-          - runner: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-            name: linux-x86_64
-          - runner: ubuntu-latest
-            target: aarch64-unknown-linux-gnu
-            name: linux-aarch64
-          - runner: windows-latest
-            target: x86_64-pc-windows-msvc
-            name: windows-x86_64
-          - runner: macos-latest
-            target: x86_64-apple-darwin
-            name: macos-x86_64
-          - runner: macos-latest
-            target: aarch64-apple-darwin
-            name: macos-aarch64
-        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
-
-    steps:
-    - uses: actions/checkout@v4
     
     - name: Install Python
       uses: actions/setup-python@v4
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: '3.10'
     
-    - name: Install Rust
-      uses: dtolnay/rust-toolchain@stable
-      with:
-        targets: ${{ matrix.platform.target }}
-    
-    # Linux交叉编译需要额外工具
-    - name: Install cross-compilation tools (Linux)
-      if: matrix.platform.target == 'aarch64-unknown-linux-gnu'
-      run: |
-        sudo apt update
-        sudo apt install gcc-aarch64-linux-gnu
-    
-    - name: Install dependencies
+    - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install maturin
+        pip install maturin polars
     
-    - name: Build wheels
+    - name: Build test (no wheel)
       run: |
-        maturin build --release --target ${{ matrix.platform.target }} --interpreter python${{ matrix.python-version }}
+        maturin develop
     
-    - name: Upload wheels
-      uses: actions/upload-artifact@v3
-      with:
-        name: wheels-${{ matrix.platform.name }}-py${{ matrix.python-version }}
-        path: target/wheels/
-
-  # 发布到GitHub Releases
-  release:
-    needs: build
-    runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
-    permissions:
-      contents: write
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Download all artifacts
-      uses: actions/download-artifact@v3
-      with:
-        path: dist
-    
-    - name: Flatten directory structure
+    - name: Python test
       run: |
-        mkdir -p wheelhouse
-        find dist -name "*.whl" -exec cp {} wheelhouse/ \;
-        ls -la wheelhouse/
-    
-    - name: Create Release
-      uses: softprops/action-gh-release@v1
-      with:
-        files: wheelhouse/*.whl
-        generate_release_notes: true
-        draft: false
-        prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') || contains(github.ref, 'rc') }}
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        python test_rust_extension.py
