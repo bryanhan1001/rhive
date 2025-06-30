@@ -1,11 +1,12 @@
+use anyhow::{anyhow, Result};
+use polars::prelude::*;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
+use pyo3::{Bound, PyRefMut};
 use pyo3_polars::PyDataFrame;
-use polars::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tokio::process::Command;
-use anyhow::{Result, anyhow};
 
 /// Hive连接配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -72,7 +73,7 @@ impl RustHiveReader {
     /// 连接到Hive
     fn connect(&mut self) -> PyResult<()> {
         println!("🔗 连接到Hive: {}:{}", self.config.host, self.config.port);
-        
+
         // 这里实现实际的连接逻辑
         // 为了演示，我们模拟连接成功
         self.connected = true;
@@ -98,16 +99,17 @@ impl RustHiveReader {
     fn query_to_polars(&self, sql: String) -> PyResult<PyDataFrame> {
         if !self.connected {
             return Err(PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
-                "未连接到Hive，请先调用connect()"
+                "未连接到Hive，请先调用connect()",
             ));
         }
 
         println!("🔍 执行SQL查询: {}", &sql[..std::cmp::min(sql.len(), 50)]);
-        
+
         // 这里调用实际的查询实现
-        let df = self.execute_sql_query(&sql)
+        let df = self
+            .execute_sql_query(&sql)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))?;
-        
+
         Ok(PyDataFrame(df))
     }
 
@@ -157,9 +159,11 @@ impl RustHiveReader {
             );
 
             let output = Command::new("beeline")
-                .args(&[
-                    "-u", &jdbc_url,
-                    "-e", sql,
+                .args([
+                    "-u",
+                    &jdbc_url,
+                    "-e",
+                    sql,
                     "--outputformat=csv2",
                     "--silent=true",
                 ])
@@ -227,7 +231,8 @@ impl RustHiveReader {
             df! {
                 "count" => vec![1000i64, 2000, 3000],
                 "table_name" => vec!["table1", "table2", "table3"],
-            }.map_err(|e| anyhow!("创建DataFrame失败: {}", e))
+            }
+            .map_err(|e| anyhow!("创建DataFrame失败: {}", e))
         } else {
             // 通用的示例数据
             df! {
@@ -236,12 +241,13 @@ impl RustHiveReader {
                 "score" => vec![95.5, 87.2, 92.1, 78.9, 88.7],
                 "created_at" => vec![
                     "2025-01-01 10:00:00",
-                    "2025-01-02 11:00:00", 
+                    "2025-01-02 11:00:00",
                     "2025-01-03 12:00:00",
                     "2025-01-04 13:00:00",
                     "2025-01-05 14:00:00",
                 ],
-            }.map_err(|e| anyhow!("创建DataFrame失败: {}", e))
+            }
+            .map_err(|e| anyhow!("创建DataFrame失败: {}", e))
         }
     }
 
@@ -271,16 +277,16 @@ impl RustHiveContext {
         }
     }
 
-    fn __enter__(&mut self) -> PyResult<&mut RustHiveReader> {
-        self.reader.connect()?;
-        Ok(&mut self.reader)
+    fn __enter__(mut slf: PyRefMut<'_, Self>) -> PyResult<PyRefMut<'_, Self>> {
+        slf.reader.connect()?;
+        Ok(slf)
     }
 
     fn __exit__(
         &mut self,
-        _exc_type: Option<&PyAny>,
-        _exc_value: Option<&PyAny>,
-        _traceback: Option<&PyAny>,
+        _exc_type: Option<&Bound<'_, PyAny>>,
+        _exc_value: Option<&Bound<'_, PyAny>>,
+        _traceback: Option<&Bound<'_, PyAny>>,
     ) -> PyResult<bool> {
         self.reader.disconnect()?;
         Ok(false) // 不抑制异常
@@ -301,29 +307,48 @@ fn create_hive_config(
 
 /// 便捷函数：从字典创建配置
 #[pyfunction]
-fn config_from_dict(config_dict: &PyDict) -> PyResult<HiveConfig> {
-    let host = config_dict.get_item("host")?.map(|v| v.extract::<String>()).transpose()?;
-    let port = config_dict.get_item("port")?.map(|v| v.extract::<u16>()).transpose()?;
-    let username = config_dict.get_item("username")?.map(|v| v.extract::<String>()).transpose()?;
-    let database = config_dict.get_item("database")?.map(|v| v.extract::<String>()).transpose()?;
-    let auth = config_dict.get_item("auth")?.map(|v| v.extract::<String>()).transpose()?;
+fn config_from_dict(config_dict: &Bound<'_, PyDict>) -> PyResult<HiveConfig> {
+    let host = config_dict
+        .get_item("host")?
+        .map(|v| v.extract::<String>())
+        .transpose()?;
+    let port = config_dict
+        .get_item("port")?
+        .map(|v| v.extract::<u16>())
+        .transpose()?;
+    let username = config_dict
+        .get_item("username")?
+        .map(|v| v.extract::<String>())
+        .transpose()?;
+    let database = config_dict
+        .get_item("database")?
+        .map(|v| v.extract::<String>())
+        .transpose()?;
+    let auth = config_dict
+        .get_item("auth")?
+        .map(|v| v.extract::<String>())
+        .transpose()?;
 
     Ok(HiveConfig::new(host, port, username, database, auth))
 }
 
 /// 性能基准测试函数
 #[pyfunction]
-fn benchmark_query(config: HiveConfig, sql: String, iterations: Option<usize>) -> PyResult<HashMap<String, f64>> {
+fn benchmark_query(
+    config: HiveConfig,
+    sql: String,
+    iterations: Option<usize>,
+) -> PyResult<HashMap<String, f64>> {
     let iterations = iterations.unwrap_or(10);
     let mut reader = RustHiveReader::new(Some(config));
     reader.connect()?;
 
     let start = std::time::Instant::now();
-    
+
     for _ in 0..iterations {
         let _result = reader.query_to_polars(sql.clone())?;
     }
-    
+
     let duration = start.elapsed();
     let avg_time = duration.as_secs_f64() / iterations as f64;
 
@@ -333,14 +358,17 @@ fn benchmark_query(config: HiveConfig, sql: String, iterations: Option<usize>) -
     results.insert("total_time".to_string(), duration.as_secs_f64());
     results.insert("average_time".to_string(), avg_time);
     results.insert("iterations".to_string(), iterations as f64);
-    results.insert("queries_per_second".to_string(), iterations as f64 / duration.as_secs_f64());
+    results.insert(
+        "queries_per_second".to_string(),
+        iterations as f64 / duration.as_secs_f64(),
+    );
 
     Ok(results)
 }
 
 /// Python模块定义
 #[pymodule]
-fn hive_reader_rs(_py: Python, m: &PyModule) -> PyResult<()> {
+fn hive_reader_rs(_py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
     // 类
     m.add_class::<HiveConfig>()?;
     m.add_class::<RustHiveReader>()?;
@@ -356,4 +384,4 @@ fn hive_reader_rs(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add("__author__", "Hive Reader Rust")?;
 
     Ok(())
-} 
+}
