@@ -25,18 +25,14 @@ jobs:
       with:
         components: rustfmt, clippy
     
-    # 更新缓存配置，包含Cargo.lock
+    # 使用Cargo.lock确保依赖版本一致
     - name: Rust Cache
       uses: Swatinem/rust-cache@v2
       with:
-        # 包含Cargo.lock在缓存key中
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        # 基于Cargo.lock生成缓存key，确保版本一致性
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-${{ hashFiles('**/Cargo.toml') }}
         # 清理旧缓存
         cache-all-crates: "true"
-    
-    # 确保依赖是最新的
-    - name: Update dependencies
-      run: cargo update
     
     - name: Check formatting
       run: cargo fmt --all -- --check
