@@ -1,6 +1,6 @@
 # Rust build artifacts
 /target/
-Cargo.lock
+# Cargo.lock - included for dependency consistency in CI
 
 # Python build artifacts
 *.pyc
