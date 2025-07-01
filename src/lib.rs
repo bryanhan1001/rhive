@@ -44,10 +44,12 @@ impl HiveConfig {
     }
 
     fn __repr__(&self) -> String {
-        format!(
-            "HiveConfig(host='{}', port={}, username='{}', database='{}', auth='{}')",
-            self.host, self.port, self.username, self.database, self.auth
-        )
+        let host = &self.host;
+        let port = self.port;
+        let username = &self.username;
+        let database = &self.database;
+        let auth = &self.auth;
+        format!("HiveConfig(host='{host}', port={port}, username='{username}', database='{database}', auth='{auth}')")
     }
 }
 
@@ -72,7 +74,9 @@ impl RustHiveReader {
 
     /// 连接到Hive
     fn connect(&mut self) -> PyResult<()> {
-        println!("🔗 连接到Hive: {}:{}", self.config.host, self.config.port);
+        let host = &self.config.host;
+        let port = self.config.port;
+        println!("🔗 连接到Hive: {host}:{port}");
 
         // 这里实现实际的连接逻辑
         // 为了演示，我们模拟连接成功
@@ -103,7 +107,8 @@ impl RustHiveReader {
             ));
         }
 
-        println!("🔍 执行SQL查询: {}", &sql[..std::cmp::min(sql.len(), 50)]);
+        let preview = &sql[..std::cmp::min(sql.len(), 50)];
+        println!("🔍 执行SQL查询: {preview}");
 
         // 这里调用实际的查询实现
         let df = self
@@ -120,14 +125,14 @@ impl RustHiveReader {
 
     /// 描述表结构
     fn describe_table(&self, table_name: String) -> PyResult<PyDataFrame> {
-        let sql = format!("DESCRIBE {}", table_name);
+        let sql = format!("DESCRIBE {table_name}");
         self.query_to_polars(sql)
     }
 
     /// 获取表样本数据
     fn get_table_sample(&self, table_name: String, limit: Option<i32>) -> PyResult<PyDataFrame> {
         let limit = limit.unwrap_or(10);
-        let sql = format!("SELECT * FROM {} LIMIT {}", table_name, limit);
+        let sql = format!("SELECT * FROM {table_name} LIMIT {limit}");
         self.query_to_polars(sql)
     }
 
@@ -153,10 +158,10 @@ impl RustHiveReader {
     fn execute_via_beeline(&self, sql: &str) -> Result<DataFrame> {
         let rt = tokio::runtime::Runtime::new()?;
         rt.block_on(async {
-            let jdbc_url = format!(
-                "jdbc:hive2://{}:{}/{}",
-                self.config.host, self.config.port, self.config.database
-            );
+            let host = &self.config.host;
+            let port = self.config.port;
+            let database = &self.config.database;
+            let jdbc_url = format!("jdbc:hive2://{host}:{port}/{database}");
 
             let output = Command::new("beeline")
                 .args([
@@ -172,7 +177,7 @@ impl RustHiveReader {
 
             if !output.status.success() {
                 let error = String::from_utf8_lossy(&output.stderr);
-                return Err(anyhow!("Beeline执行失败: {}", error));
+                return Err(anyhow!("Beeline执行失败: {error}"));
             }
 
             let csv_data = String::from_utf8_lossy(&output.stdout);
@@ -182,7 +187,7 @@ impl RustHiveReader {
 
     /// 模拟查询执行（用于演示）
     fn execute_mock_query(&self, sql: &str) -> Result<DataFrame> {
-        println!("📊 模拟执行SQL: {}", sql);
+        println!("📊 模拟执行SQL: {sql}");
 
         // 根据SQL类型返回不同的模拟数据
         if sql.to_uppercase().contains("SHOW TABLES") {
@@ -232,7 +237,7 @@ impl RustHiveReader {
                 "count" => vec![1000i64, 2000, 3000],
                 "table_name" => vec!["table1", "table2", "table3"],
             }
-            .map_err(|e| anyhow!("创建DataFrame失败: {}", e))
+            .map_err(|e| anyhow!("创建DataFrame失败: {e}"))
         } else {
             // 通用的示例数据
             df! {
@@ -247,7 +252,7 @@ impl RustHiveReader {
                     "2025-01-05 14:00:00",
                 ],
             }
-            .map_err(|e| anyhow!("创建DataFrame失败: {}", e))
+            .map_err(|e| anyhow!("创建DataFrame失败: {e}"))
         }
     }
 
