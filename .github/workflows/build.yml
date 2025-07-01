@@ -29,19 +29,19 @@ jobs:
     - name: Rust Cache
       uses: Swatinem/rust-cache@v2
       with:
-        # 基于Cargo.lock生成缓存key，确保版本一致性
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-${{ hashFiles('**/Cargo.toml') }}
-        # 清理旧缓存
+        # 基于Cargo.lock生成额外缓存标识
+        shared-key: ${{ hashFiles('**/Cargo.lock') }}
+        # 清理旧缓存，确保依赖版本一致
         cache-all-crates: "true"
     
     - name: Check formatting
       run: cargo fmt --all -- --check
     
-    # 修复Clippy配置，添加更详细的输出
+    # Clippy检查（与本地命令完全一致）
     - name: Clippy
       run: |
         cargo clippy --version
-        cargo clippy --all-targets --all-features --verbose -- -D warnings
+        cargo clippy --all-targets --all-features -- -D warnings
     
     - name: Test
       run: cargo test --verbose

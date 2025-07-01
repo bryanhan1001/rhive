@@ -19,20 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # 在所有平台预安装Rust
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt, clippy
-
-      - name: Verify Rust installation
-        run: |
-          rustc --version
-          cargo --version
-          which rustc
-          which cargo
-          echo "CARGO_HOME: $CARGO_HOME"
-          echo "RUSTUP_HOME: $RUSTUP_HOME"
+      # Rust将在cibuildwheel内部安装
 
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.21.3
@@ -41,15 +28,24 @@ jobs:
           CIBW_BUILD: cp39-* cp310-* cp311-* cp312-*
           # 跳过32位和i686
           CIBW_SKIP: "*-win32 *-manylinux_i686 *-musllinux_i686"
-          # 确保构建依赖安装 + 调试信息
+          # 各平台：在cibuildwheel环境内安装Rust工具链
+          CIBW_BEFORE_ALL_LINUX: |
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
+            source $HOME/.cargo/env
+          CIBW_BEFORE_ALL_WINDOWS: |
+            curl --proto '=https' --tlsv1.2 -sSf -o rustup-init.exe https://win.rustup.rs
+            ./rustup-init.exe -y --default-toolchain stable
+            rm rustup-init.exe
+          CIBW_BEFORE_ALL_MACOS: |
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
+            source $HOME/.cargo/env
+          # 所有平台：安装maturin并确认环境
           CIBW_BEFORE_BUILD: |
             pip install maturin
             python --version
-            pip --version
-            maturin --version
-            rustc --version
-            cargo --version
-          # 确保Rust工具链在PATH中 (已在action中预安装)
+            rustc --version || echo "rustc not available"
+            cargo --version || echo "cargo not available"
+          # 确保Rust工具链在PATH中
           CIBW_ENVIRONMENT_LINUX: 'PATH="$PATH:$HOME/.cargo/bin" CARGO_NET_GIT_FETCH_WITH_CLI="true"'
           CIBW_ENVIRONMENT_WINDOWS: 'PATH="$PATH;%USERPROFILE%\.cargo\bin" CARGO_NET_GIT_FETCH_WITH_CLI="true"'
           CIBW_ENVIRONMENT_MACOS: 'PATH="$PATH:$HOME/.cargo/bin" CARGO_NET_GIT_FETCH_WITH_CLI="true"'
