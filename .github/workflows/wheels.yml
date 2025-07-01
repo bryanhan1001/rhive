@@ -37,12 +37,18 @@ jobs:
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.21.3
         env:
-          # 构建的Python版本
-          CIBW_BUILD: cp38-* cp39-* cp310-* cp311-* cp312-*
+          # 构建的Python版本 (跳过3.8，某些依赖已不支持)
+          CIBW_BUILD: cp39-* cp310-* cp311-* cp312-*
           # 跳过32位和i686
           CIBW_SKIP: "*-win32 *-manylinux_i686 *-musllinux_i686"
-          # 确保构建依赖安装
-          CIBW_BEFORE_BUILD: pip install maturin
+          # 确保构建依赖安装 + 调试信息
+          CIBW_BEFORE_BUILD: |
+            pip install maturin
+            python --version
+            pip --version
+            maturin --version
+            rustc --version
+            cargo --version
           # 确保Rust工具链在PATH中 (已在action中预安装)
           CIBW_ENVIRONMENT_LINUX: 'PATH="$PATH:$HOME/.cargo/bin" CARGO_NET_GIT_FETCH_WITH_CLI="true"'
           CIBW_ENVIRONMENT_WINDOWS: 'PATH="$PATH;%USERPROFILE%\.cargo\bin" CARGO_NET_GIT_FETCH_WITH_CLI="true"'
