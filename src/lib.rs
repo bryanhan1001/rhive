@@ -296,6 +296,37 @@ impl RustHiveContext {
         self.reader.disconnect()?;
         Ok(false) // 不抑制异常
     }
+
+    // 代理方法：转发到内部的RustHiveReader
+    /// 执行SQL查询并返回Polars DataFrame
+    fn query_to_polars(&self, sql: String) -> PyResult<PyDataFrame> {
+        self.reader.query_to_polars(sql)
+    }
+
+    /// 显示所有表
+    fn show_tables(&self) -> PyResult<PyDataFrame> {
+        self.reader.show_tables()
+    }
+
+    /// 描述表结构
+    fn describe_table(&self, table_name: String) -> PyResult<PyDataFrame> {
+        self.reader.describe_table(table_name)
+    }
+
+    /// 获取表样本数据
+    fn get_table_sample(&self, table_name: String, limit: Option<i32>) -> PyResult<PyDataFrame> {
+        self.reader.get_table_sample(table_name, limit)
+    }
+
+    /// 检查连接状态
+    fn is_connected(&self) -> bool {
+        self.reader.is_connected()
+    }
+
+    /// 获取配置信息
+    fn get_config(&self) -> HiveConfig {
+        self.reader.get_config()
+    }
 }
 
 /// 便捷函数：创建Hive配置
