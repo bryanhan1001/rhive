@@ -8,7 +8,10 @@
 """
 
 import os
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .hive_reader_rs import HiveConfig
 
 
 class ConfigManager:
