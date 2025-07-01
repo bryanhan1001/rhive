@@ -51,15 +51,23 @@ jobs:
       with:
         python-version: '3.10'
     
-    - name: Install Python dependencies
+    - name: Create virtual environment and install dependencies
       run: |
+        python -m venv .venv
+        source .venv/bin/activate
         python -m pip install --upgrade pip
-        pip install maturin polars
+        pip install maturin polars pytest
     
     - name: Build test (no wheel)
       run: |
-        maturin develop --release
+        source .venv/bin/activate
+        echo "Python version: $(python --version)"
+        echo "Maturin version: $(maturin --version)"
+        echo "Cargo version: $(cargo --version)"
+        echo "Rustc version: $(rustc --version)"
+        maturin develop --release --verbose
     
     - name: Python test
       run: |
+        source .venv/bin/activate
         python test_rust_extension.py

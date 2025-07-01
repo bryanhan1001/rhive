@@ -337,6 +337,30 @@ fn config_from_dict(config_dict: &Bound<'_, PyDict>) -> PyResult<HiveConfig> {
     Ok(HiveConfig::new(host, port, username, database, auth))
 }
 
+/// 便捷函数：创建默认配置
+#[pyfunction]
+fn create_default_config() -> HiveConfig {
+    HiveConfig::new(None, None, None, None, None)
+}
+
+/// 便捷函数：获取默认Hive配置
+#[pyfunction]
+fn get_default_hive_config() -> HiveConfig {
+    create_default_config()
+}
+
+/// 便捷函数：获取配置管理器（返回配置对象）
+#[pyfunction]
+fn get_config_manager() -> HiveConfig {
+    create_default_config()
+}
+
+/// 便捷函数：连接到Hive（返回上下文管理器）
+#[pyfunction]
+fn connect_hive(config: Option<HiveConfig>) -> RustHiveContext {
+    RustHiveContext::new(config)
+}
+
 /// 性能基准测试函数
 #[pyfunction]
 fn benchmark_query(
@@ -382,6 +406,10 @@ fn hive_reader_rs(_py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
     // 函数
     m.add_function(wrap_pyfunction!(create_hive_config, m)?)?;
     m.add_function(wrap_pyfunction!(config_from_dict, m)?)?;
+    m.add_function(wrap_pyfunction!(create_default_config, m)?)?;
+    m.add_function(wrap_pyfunction!(get_default_hive_config, m)?)?;
+    m.add_function(wrap_pyfunction!(get_config_manager, m)?)?;
+    m.add_function(wrap_pyfunction!(connect_hive, m)?)?;
     m.add_function(wrap_pyfunction!(benchmark_query, m)?)?;
 
     // 版本信息
