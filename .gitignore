@@ -20,6 +20,11 @@ pip-delete-this-directory.txt
 dist/
 build/
 
+# PyO3/maturin build artifacts
+*.so
+*.dylib
+*.pyd
+
 # IDE files
 .vscode/
 .idea/
