@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "hive-reader-rs"
-version = "0.1.0"
+version = "0.2.0"
 description = "高性能Rust版本的Hive数据读取工具，支持Polars DataFrame"
 authors = [
     {name = "Hive Reader Team", email = "team@example.com"},
