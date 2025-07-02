@@ -930,11 +930,12 @@ impl RustHiveWriter {
             AnyValue::Float64(f) => f.to_string(),
             _ => {
                 // 处理字符串和其他类型，统一转换为字符串
-                let str_value = format!("{}", value);
+                let str_value = format!("{value}");
                 if str_value.contains('"') || str_value.contains('\'') {
-                    format!("'{}'", str_value.replace('\'', "''"))
+                    let escaped_value = str_value.replace('\'', "''");
+                    format!("'{escaped_value}'")
                 } else {
-                    format!("'{}'", str_value)
+                    format!("'{str_value}'")
                 }
             }
         };
