@@ -8,7 +8,6 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tokio::process::Command;
 
-
 /// Hive连接配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[pyclass]
@@ -432,11 +431,11 @@ fn benchmark_query(
 fn hive_reader_rs(_py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
     // 配置类
     m.add_class::<HiveConfig>()?;
-    
+
     // 读取器相关类
     m.add_class::<RustHiveReader>()?;
     m.add_class::<RustHiveContext>()?;
-    
+
     // 写入器相关类
     m.add_class::<WriteMode>()?;
     m.add_class::<RustHiveWriter>()?;
@@ -548,9 +547,9 @@ impl RustHiveWriter {
 
         let mode = mode.unwrap_or(WriteMode::ErrorIfExists);
         let create_table = create_table.unwrap_or(true);
-        
+
         println!("📝 写入数据到表: {table_name}");
-        
+
         // 调用实际的写入实现
         self.execute_write_operation(&df.0, &table_name, &mode, &partition_cols, create_table)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))?;
@@ -635,10 +634,8 @@ impl RustHiveWriter {
         }
 
         // 如果表不存在且需要创建表，则创建表结构
-        if !table_exists || matches!(mode, WriteMode::Overwrite) {
-            if create_table {
-                self.create_table_schema(df, table_name, partition_cols)?;
-            }
+        if (!table_exists || matches!(mode, WriteMode::Overwrite)) && create_table {
+            self.create_table_schema(df, table_name, partition_cols)?;
         }
 
         // 写入数据
@@ -666,7 +663,7 @@ impl RustHiveWriter {
             let port = self.config.port;
             let database = &self.config.database;
             let jdbc_url = format!("jdbc:hive2://{host}:{port}/{database}");
-            
+
             let sql = format!("SHOW TABLES LIKE '{table_name}'");
 
             let output = Command::new("beeline")
@@ -705,14 +702,14 @@ impl RustHiveWriter {
         for (name, dtype) in schema.iter() {
             let hive_type = self.polars_to_hive_type(dtype)?;
             let name_str = name.to_string(); // 转换SmartString到String
-            
+
             if let Some(partitions) = partition_cols {
                 if partitions.contains(&name_str) {
                     partition_definitions.push(format!("{name_str} {hive_type}"));
                     continue;
                 }
             }
-            
+
             column_definitions.push(format!("{name_str} {hive_type}"));
         }
 
@@ -777,13 +774,7 @@ impl RustHiveWriter {
             let jdbc_url = format!("jdbc:hive2://{host}:{port}/{database}");
 
             let output = Command::new("beeline")
-                .args([
-                    "-u",
-                    &jdbc_url,
-                    "-e",
-                    sql,
-                    "--silent=true",
-                ])
+                .args(["-u", &jdbc_url, "-e", sql, "--silent=true"])
                 .output()
                 .await?;
 
@@ -826,7 +817,7 @@ impl RustHiveWriter {
     ) -> Result<()> {
         // 创建临时CSV文件
         let temp_file = format!("/tmp/{table_name}_{}.csv", chrono::Utc::now().timestamp());
-        
+
         // 使用LazyFrame写入CSV文件 (避免可变引用问题)
         let mut df_clone = df.clone();
         let mut file = std::fs::File::create(&temp_file)?;
@@ -835,9 +826,7 @@ impl RustHiveWriter {
             .finish(&mut df_clone)?;
 
         // 执行LOAD DATA语句
-        let load_sql = format!(
-            "LOAD DATA LOCAL INPATH '{temp_file}' INTO TABLE {table_name}"
-        );
+        let load_sql = format!("LOAD DATA LOCAL INPATH '{temp_file}' INTO TABLE {table_name}");
 
         self.execute_ddl(&load_sql)?;
 
@@ -855,8 +844,11 @@ impl RustHiveWriter {
         _partition_cols: &Option<Vec<String>>,
     ) -> Result<()> {
         // 创建临时文件路径
-        let temp_file = format!("/tmp/{table_name}_{}.parquet", chrono::Utc::now().timestamp());
-        
+        let temp_file = format!(
+            "/tmp/{table_name}_{}.parquet",
+            chrono::Utc::now().timestamp()
+        );
+
         println!("📦 将生成Parquet文件: {temp_file}");
         println!("📋 请使用外部工具将DataFrame保存为Parquet并上传到HDFS");
         println!("💡 提示: 可以使用 df.write_parquet() 方法保存文件");
@@ -880,7 +872,11 @@ impl RustHiveWriter {
         }
 
         // 构建INSERT语句
-        let columns: Vec<String> = df.get_column_names().iter().map(|s| s.to_string()).collect();
+        let columns: Vec<String> = df
+            .get_column_names()
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
         let column_list = columns.join(", ");
 
         // 批量插入数据
@@ -888,11 +884,9 @@ impl RustHiveWriter {
         for chunk_start in (0..rows_count).step_by(batch_size) {
             let chunk_end = std::cmp::min(chunk_start + batch_size, rows_count);
             let chunk_df = df.slice(chunk_start as i64, chunk_end - chunk_start);
-            
+
             let values = self.dataframe_to_values_string(&chunk_df)?;
-            let insert_sql = format!(
-                "INSERT INTO {table_name} ({column_list}) VALUES {values}"
-            );
+            let insert_sql = format!("INSERT INTO {table_name} ({column_list}) VALUES {values}");
 
             self.execute_ddl(&insert_sql)?;
         }
@@ -903,15 +897,15 @@ impl RustHiveWriter {
     /// 将DataFrame转换为VALUES字符串
     fn dataframe_to_values_string(&self, df: &DataFrame) -> Result<String> {
         let mut values = Vec::new();
-        
+
         for row_idx in 0..df.height() {
             let mut row_values = Vec::new();
-            
+
             for column in df.get_columns() {
                 let value = self.format_column_value(column, row_idx)?;
                 row_values.push(value);
             }
-            
+
             values.push(format!("({})", row_values.join(", ")));
         }
 
@@ -991,7 +985,8 @@ impl RustHiveWriteContext {
         partition_cols: Option<Vec<String>>,
         create_table: Option<bool>,
     ) -> PyResult<()> {
-        self.writer.write_table(df, table_name, mode, partition_cols, create_table)
+        self.writer
+            .write_table(df, table_name, mode, partition_cols, create_table)
     }
 
     /// 创建表
@@ -1001,7 +996,8 @@ impl RustHiveWriteContext {
         table_name: String,
         partition_cols: Option<Vec<String>>,
     ) -> PyResult<()> {
-        self.writer.create_table_from_dataframe(df, table_name, partition_cols)
+        self.writer
+            .create_table_from_dataframe(df, table_name, partition_cols)
     }
 
     /// 删除表
